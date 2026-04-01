@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bichinho Virtual 🐾</title>
+
+  <!-- DaisyUI + Tailwind CSS via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style>
+    /* ── Transição suave de fundo (dia ↔ noite) ── */
+    body {
+      transition: background 3s ease-in-out;
+    }
+
+    /* ── Animações da criatura ── */
+    @keyframes flutuando {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-18px); }
+    }
+    @keyframes pulando {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      40%       { transform: translateY(-30px) scale(1.05); }
+      60%       { transform: translateY(-28px) scale(1.05); }
+    }
+    @keyframes tremendo {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-12px) rotate(-3deg); }
+      40%       { transform: translateX(12px) rotate(3deg); }
+      60%       { transform: translateX(-8px); }
+      80%       { transform: translateX(8px); }
+    }
+    @keyframes comendo {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.12); }
+    }
+    @keyframes morto {
+      0%, 100% { transform: rotate(-5deg); opacity: 0.65; }
+      50%       { transform: rotate(5deg);  opacity: 0.5;  }
+    }
+    @keyframes piscar {
+      0%, 90%, 100% { opacity: 1; }
+      95%            { opacity: 0; }
+    }
+
+    .anim-normal  { animation: flutuando 3s ease-in-out infinite; }
+    .anim-feliz   { animation: pulando   0.7s ease-in-out infinite; }
+    .anim-bravo   { animation: tremendo  0.4s ease-in-out infinite; }
+    .anim-comendo { animation: comendo   0.5s ease-in-out infinite; }
+    .anim-morto   { animation: morto     2s   ease-in-out infinite; }
+    .anim-fome    { animation: flutuando 3s ease-in-out infinite, piscar 3s infinite; }
+
+    /* ── Estrelas (modo noite) ── */
+    .stars-wrap {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      transition: opacity 3s ease-in-out;
+    }
+    .stars-wrap.visivel { opacity: 1; }
+
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle var(--dur, 2s) ease-in-out infinite;
+      animation-delay: var(--delay, 0s);
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.15; transform: scale(0.8); }
+      50%       { opacity: 1;    transform: scale(1.3); }
+    }
+
+    /* Lua (noite) */
+    .lua {
+      position: fixed;
+      top: 24px; right: 32px;
+      font-size: 3rem;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 3s ease-in-out;
+      pointer-events: none;
+    }
+    .lua.visivel { opacity: 1; }
+
+    /* Sol (dia) */
+    .sol {
+      position: fixed;
+      top: 18px; right: 28px;
+      font-size: 3rem;
+      z-index: 1;
+      opacity: 1;
+      transition: opacity 3s ease-in-out;
+      pointer-events: none;
+    }
+    .sol.oculto { opacity: 0; }
+
+    /* ── Camada de conteúdo acima das estrelas ── */
+    .layer { position: relative; z-index: 2; }
+
+    /* ── Barra de fome crítica piscando ── */
+    @keyframes barra-critica {
+      0%, 100% { filter: brightness(1); }
+      50%       { filter: brightness(1.6); }
+    }
+    .barra-critica { animation: barra-critica 0.5s ease-in-out infinite; }
+
+    /* ── Botão de comida ── */
+    #btnComida {
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #btnComida:hover  { transform: scale(1.12); }
+    #btnComida:active { transform: scale(0.92); }
+
+    /* ── Easter egg: botão Ferlini invisível no canto ── */
+    #ferliniBtn {
+      position: fixed;
+      bottom: 8px; right: 8px;
+      width: 14px; height: 14px;
+      opacity: 0.015;
+      cursor: pointer;
+      z-index: 9999;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+    }
+
+    /* ── Balão de fala ── */
+    #balao {
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    #balao.oculto {
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+    }
+
+    /* ── Criatura clicável ── */
+    #criatura {
+      cursor: pointer;
+      user-select: none;
+      transition: filter 0.3s ease;
+    }
+    #criatura:hover { filter: drop-shadow(0 0 18px rgba(255,180,255,0.7)); }
+  </style>
+</head>
+
+<!-- ════════════════════════════════
+     BODY: fundo gradiente dia
+════════════════════════════════ -->
+<body
+  class="min-h-screen flex flex-col"
+  id="corpo"
+  style="
+    background: linear-gradient(180deg, #87CEEB 0%, #b8e4f9 45%, #c8f0c0 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  "
+>
+
+<!-- Estrelas (noite) -->
+<div class="stars-wrap" id="estrelas"></div>
+
+<!-- Astros -->
+<div class="sol" id="sol">☀️</div>
+<div class="lua" id="lua">🌙</div>
+
+<!-- ═══════════════════════════════════════
+     CONTEÚDO PRINCIPAL
+═══════════════════════════════════════ -->
+<div class="layer w-full flex flex-col min-h-screen">
+
+  <!-- ── Barra Superior ── -->
+  <div class="w-full flex items-center justify-between p-4 gap-4 flex-wrap">
+
+    <!-- Avatar + Nome -->
+    <div class="flex items-center gap-3">
+      <div class="avatar">
+        <div class="w-14 rounded-full ring ring-pink-400 ring-offset-2 ring-offset-base-100 bg-pink-100 flex items-center justify-center text-2xl overflow-hidden">
+          <span id="avatarEmoji" class="flex items-center justify-center w-full h-full leading-none">🐣</span>
+        </div>
+      </div>
+      <input
+        type="text"
+        id="nomeInput"
+        placeholder="Nome da criatura..."
+        class="input input-bordered input-secondary w-44 sm:w-56"
+        oninput="atualizarNome()"
+        maxlength="20"
+      />
+    </div>
+
+    <!-- Toggle Dia / Noite -->
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-semibold select-none" id="toggleLabel">🌞 Dia</span>
+      <input
+        type="checkbox"
+        class="toggle toggle-primary"
+        id="toggleNoite"
+        onchange="toggleManual()"
+      />
+      <span class="text-sm select-none">🌙</span>
+    </div>
+
+  </div>
+
+  <!-- ── Barra de Fome ── -->
+  <div class="w-full px-5 pb-1">
+    <div class="flex items-center justify-between mb-1">
+      <span class="text-sm font-bold text-base-content/80">🍽️ Fome</span>
+      <span id="statusFome" class="text-xs font-medium text-success">Satisfeito</span>
+    </div>
+    <progress id="barraFome" class="progress progress-success w-full h-3" value="100" max="100"></progress>
+  </div>
+
+  <!-- ── Criatura Central ── -->
+  <div class="flex flex-col items-center justify-center flex-1 w-full px-4 py-6 gap-3">
+
+    <!-- Balão de fala -->
+    <div id="balao" class="chat chat-start oculto">
+      <div class="chat-bubble chat-bubble-primary shadow-md" id="balaoTexto">Oi!</div>
+    </div>
+
+    <!-- Emoji da criatura (ou imagem, se tiver) -->
+    <div
+      id="criatura"
+      class="anim-normal"
+      onclick="carinho()"
+      title="Clique para fazer carinho!"
+      style="font-size: 9rem; line-height: 1; text-align: center;"
+    >
+      <!--
+        💡 Se quiser usar sua imagem de IA, troque o emoji abaixo por:
+           <img id="imgCriatura" src="cria_norm.png" style="width:220px;height:220px;object-fit:contain;" />
+        e adapte a função mudarEstado() para trocar o src da <img>.
+      -->
+      <span id="emojiCriatura">🐣</span>
+    </div>
+
+    <!-- Badge de estado -->
+    <div id="badgeEstado" class="badge badge-primary badge-lg text-sm px-4 py-3 shadow">
+      Feliz e saudável ✨
+    </div>
+
+    <!-- Contador (debug visual) -->
+    <div class="text-xs text-base-content/40" id="debugInfo">⏱ 0s</div>
+
+  </div>
+
+  <!-- ── Botão de Comida ── -->
+  <div class="flex flex-col items-center gap-2 pb-10 w-full">
+    <span class="text-xs text-base-content/60 font-medium">Clique para alimentar</span>
+
+    <!--
+      💡 Se quiser usar sua imagem de IA, troque o botão abaixo por:
+         <img id="btnComida" src="btn_frut.png"
+              onclick="alimentar()"
+              style="width:100px;height:100px;object-fit:contain;cursor:pointer;"
+              class="active:scale-90 transition-transform" />
+    -->
+    <button
+      id="btnComida"
+      class="btn btn-success btn-circle text-5xl w-24 h-24 shadow-xl"
+      onclick="alimentar()"
+      title="Alimentar a criatura"
+    >🍓</button>
+  </div>
+
+</div><!-- fim layer -->
+
+<!-- ═════════════════════════════════
+     EASTER EGG — Ferlini 👀
+     (botão minúsculo e quase invisível no canto inferior direito)
+════════════════════════════════════ -->
+<button id="ferliniBtn" onclick="mostrarFerlini()" title="..."></button>
+
+<!-- Modal Ferlini -->
+<dialog id="modalFerlini" class="modal">
+  <div class="modal-box flex flex-col items-center gap-4 text-center">
+    <h3 class="font-extrabold text-xl">🌟 Você achou o Gostosinho! 🌟</h3>
+    <div class="text-8xl">🧑‍🏫</div>
+    <p class="font-bold text-2xl text-primary">Prof. Ferlini</p>
+    <p class="text-sm text-base-content/60 italic">vulgo Gostosinho 😍<br/>Parabéns — +1 ponto extra!</p>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn btn-primary">Fechar (shhhh 🤫)</button>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>fechar</button></form>
+</dialog>
+
+
+<!-- ═══════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════ -->
+<script>
+
+  // ─────────────────────────────────────────────
+  // ESTADOS DA CRIATURA
+  // ─────────────────────────────────────────────
+  const ESTADOS = {
+    normal:   { emoji: '🐣', label: 'Feliz e saudável ✨',  badge: 'badge-primary', anim: 'anim-normal',  fala: '😊 Estou ótimo!' },
+    com_fome: { emoji: '😟', label: 'Com fome... 🍽️',       badge: 'badge-warning', anim: 'anim-fome',    fala: '🍽️ Tô com fome!' },
+    bravo:    { emoji: '😡', label: 'BRAVO! Me alimente!💢', badge: 'badge-error',   anim: 'anim-bravo',   fala: '😤 TÔ FURIOSO!!' },
+    comendo:  { emoji: '😋', label: 'Comendo... 😋',         badge: 'badge-success', anim: 'anim-comendo', fala: '🍓 NOM NOM NOM!' },
+    feliz:    { emoji: '🥰', label: 'Feliz e amado! 💖',     badge: 'badge-success', anim: 'anim-feliz',   fala: '💖 Obrigado!!'    },
+    morto:    { emoji: '💀', label: 'MORREU... 😢',          badge: 'badge-neutral', anim: 'anim-morto',   fala: '☠️ ...'           },
+  };
+
+  // ─────────────────────────────────────────────
+  // VARIÁVEIS GLOBAIS
+  // ─────────────────────────────────────────────
+  let contador        = 0;
+  let estadoAtual     = 'normal';
+  let timeoutClique   = null;
+  let timeoutBack     = null;
+  let intervaloCtrl   = null;
+
+  // Dia / Noite
+  const FUNDO_DIA   = 'linear-gradient(180deg, #87CEEB 0%, #b8e4f9 45%, #c8f0c0 100%)';
+  const FUNDO_NOITE = 'linear-gradient(180deg, #0b0c2a 0%, #1a1a4e 50%, #0d0d1f 100%)';
+  let modoNoite       = false;
+  let horasVirtualis  = 0;          // 0–23 (simulado)
+  let intervaloHoras  = null;
+  let modoManual      = false;      // se o toggle foi acionado manualmente
+
+  // ─────────────────────────────────────────────
+  // REFERÊNCIAS DO DOM
+  // ─────────────────────────────────────────────
+  const emojiCriatura = document.getElementById('emojiCriatura');
+  const elCriatura    = document.getElementById('criatura');
+  const badgeEstado   = document.getElementById('badgeEstado');
+  const barraFome     = document.getElementById('barraFome');
+  const statusFome    = document.getElementById('statusFome');
+  const balao         = document.getElementById('balao');
+  const balaoTexto    = document.getElementById('balaoTexto');
+  const avatarEmoji   = document.getElementById('avatarEmoji');
+  const debugInfo     = document.getElementById('debugInfo');
+  const estrelas      = document.getElementById('estrelas');
+  const corpo         = document.getElementById('corpo');
+  const sol           = document.getElementById('sol');
+  const lua           = document.getElementById('lua');
+  const toggleNoite   = document.getElementById('toggleNoite');
+  const toggleLabel   = document.getElementById('toggleLabel');
+
+  // ─────────────────────────────────────────────
+  // FUNÇÃO PRINCIPAL: CONTROLE DE ESTADO
+  // ─────────────────────────────────────────────
+  function controle() {
+    if (intervaloCtrl) clearInterval(intervaloCtrl);
+
+    intervaloCtrl = setInterval(() => {
+      // Não conta enquanto come, está feliz ou morreu
+      if (['comendo', 'feliz', 'morto'].includes(estadoAtual)) return;
+
+      contador++;
+      debugInfo.textContent = `⏱ ${contador}s`;
+
+      // Atualiza barra de fome (100 → 0 ao longo de 30 ticks)
+      const fome = Math.max(0, 100 - Math.round((contador / 30) * 100));
+      atualizarBarraFome(fome);
+
+      // Muda estado conforme o tempo passa
+      if (contador >= 30) {
+        mudarEstado('morto');
+      } else if (contador >= 20) {
+        if (estadoAtual !== 'bravo') mudarEstado('bravo');
+      } else if (contador >= 10) {
+        if (estadoAtual !== 'com_fome') mudarEstado('com_fome');
+      }
+    }, 1000);
+  }
+
+  // ─────────────────────────────────────────────
+  // FUNÇÃO ALIMENTAR
+  // ─────────────────────────────────────────────
+  function alimentar() {
+    // Ressuscita se estava morto ✨
+    if (estadoAtual === 'morto') {
+      falar('✨ Voltei à vida! Obrigado!');
+    } else {
+      falar('🍓 NOM NOM NOM!');
+    }
+
+    contador = 0;
+    atualizarBarraFome(100);
+    mudarEstado('comendo');
+
+    if (timeoutClique) clearTimeout(timeoutClique);
+    if (timeoutBack)   clearTimeout(timeoutBack);
+
+    timeoutClique = setTimeout(() => {
+      mudarEstado('feliz');
+      timeoutBack = setTimeout(() => {
+        mudarEstado('normal');
+      }, 2000);
+    }, 1000);
+  }
+
+  // ─────────────────────────────────────────────
+  // MUDAR ESTADO
+  // ─────────────────────────────────────────────
+  function mudarEstado(novoEstado) {
+    estadoAtual = novoEstado;
+    const est = ESTADOS[novoEstado];
+
+    // Emoji
+    emojiCriatura.textContent = est.emoji;
+    avatarEmoji.textContent   = est.emoji;
+
+    // Animação
+    elCriatura.className = est.anim;
+
+    // Badge
+    badgeEstado.className   = `badge ${est.badge} badge-lg text-sm px-4 py-3 shadow`;
+    badgeEstado.textContent = est.label;
+
+    // Fala automática em estados críticos
+    if (['morto', 'bravo', 'com_fome'].includes(novoEstado)) {
+      falar(est.fala);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // BARRA DE FOME
+  // ─────────────────────────────────────────────
+  function atualizarBarraFome(valor) {
+    barraFome.value = valor;
+
+    if (valor > 60) {
+      barraFome.className = 'progress progress-success w-full h-3';
+      statusFome.className = 'text-xs font-medium text-success';
+      statusFome.textContent = 'Satisfeito 😊';
+      barraFome.classList.remove('barra-critica');
+    } else if (valor > 25) {
+      barraFome.className = 'progress progress-warning w-full h-3';
+      statusFome.className = 'text-xs font-medium text-warning';
+      statusFome.textContent = 'Com fome... 🍽️';
+      barraFome.classList.remove('barra-critica');
+    } else {
+      barraFome.className = 'progress progress-error w-full h-3';
+      statusFome.className = 'text-xs font-medium text-error';
+      statusFome.textContent = 'FAMINTO! 😱';
+      barraFome.classList.add('barra-critica');
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // BALÃO DE FALA
+  // ─────────────────────────────────────────────
+  let timerFala = null;
+  function falar(texto) {
+    balaoTexto.textContent = texto;
+    balao.classList.remove('oculto');
+    if (timerFala) clearTimeout(timerFala);
+    timerFala = setTimeout(() => balao.classList.add('oculto'), 2800);
+  }
+
+  // ─────────────────────────────────────────────
+  // CARINHO (clique na criatura)
+  // ─────────────────────────────────────────────
+  const fraseCarinho = [
+    '💖 Adoro você!', '🥰 Mais carinho!', '✨ Que gostoso!',
+    '😊 Obrigado!', '🌸 Você é incrível!', '💕 Feliz demais!'
+  ];
+  function carinho() {
+    if (estadoAtual === 'morto') {
+      falar('🍓 Me alimenta logo...');
+      return;
+    }
+    falar(fraseCarinho[Math.floor(Math.random() * fraseCarinho.length)]);
+    elCriatura.style.transform = 'scale(1.25)';
+    setTimeout(() => { elCriatura.style.transform = ''; }, 250);
+  }
+
+  // ─────────────────────────────────────────────
+  // NOME DA CRIATURA
+  // ─────────────────────────────────────────────
+  function atualizarNome() {
+    const nome = document.getElementById('nomeInput').value.trim();
+    document.title = nome ? `${nome} 🐾` : 'Bichinho Virtual 🐾';
+  }
+
+  // ─────────────────────────────────────────────
+  // DIA / NOITE AUTOMÁTICO
+  // ─────────────────────────────────────────────
+  function atualizarFundo() {
+    if (intervaloHoras) clearInterval(intervaloHoras);
+    horasVirtualis = 0;
+
+    // Cada "hora virtual" dura 5 segundos → ciclo completo de 24h = 2 minutos
+    intervaloHoras = setInterval(() => {
+      if (modoManual) return; // respeita toggle manual
+
+      horasVirtualis++;
+      if (horasVirtualis >= 24) horasVirtualis = 0;
+
+      if (horasVirtualis >= 12 && !modoNoite) {
+        ativarNoite();
+      } else if (horasVirtualis < 12 && modoNoite) {
+        ativarDia();
+      }
+    }, 5000);
+  }
+
+  function ativarNoite() {
+    modoNoite = true;
+    corpo.style.background = FUNDO_NOITE;
+    estrelas.classList.add('visivel');
+    sol.classList.add('oculto');
+    lua.classList.remove('visivel'); // resetar
+    setTimeout(() => lua.classList.add('visivel'), 100);
+    toggleNoite.checked = true;
+    toggleLabel.textContent = '🌙 Noite';
+  }
+
+  function ativarDia() {
+    modoNoite = false;
+    corpo.style.background = FUNDO_DIA;
+    estrelas.classList.remove('visivel');
+    lua.classList.remove('visivel');
+    sol.classList.remove('oculto');
+    toggleNoite.checked = false;
+    toggleLabel.textContent = '🌞 Dia';
+  }
+
+  // ─────────────────────────────────────────────
+  // TOGGLE MANUAL DIA / NOITE
+  // ─────────────────────────────────────────────
+  function toggleManual() {
+    modoManual = true; // para o ciclo automático
+    if (toggleNoite.checked) {
+      ativarNoite();
+      toggleLabel.textContent = '🌙 Noite';
+    } else {
+      ativarDia();
+      toggleLabel.textContent = '🌞 Dia';
+    }
+    // Retoma automático depois de 30s sem interação
+    clearTimeout(window._timerManual);
+    window._timerManual = setTimeout(() => { modoManual = false; }, 30000);
+  }
+
+  // ─────────────────────────────────────────────
+  // ESTRELAS ANIMADAS
+  // ─────────────────────────────────────────────
+  function criarEstrelas() {
+    estrelas.innerHTML = '';
+    for (let i = 0; i < 90; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const tamanho = (Math.random() * 2.5 + 0.8).toFixed(1);
+      s.style.cssText = `
+        width: ${tamanho}px;
+        height: ${tamanho}px;
+        top: ${(Math.random() * 75).toFixed(1)}%;
+        left: ${(Math.random() * 100).toFixed(1)}%;
+        --dur: ${(Math.random() * 2.5 + 1).toFixed(1)}s;
+        --delay: ${(Math.random() * 3).toFixed(1)}s;
+      `;
+      estrelas.appendChild(s);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // EASTER EGG — FERLINI
+  // ─────────────────────────────────────────────
+  function mostrarFerlini() {
+    document.getElementById('modalFerlini').showModal();
+  }
+
+  // ─────────────────────────────────────────────
+  // INICIALIZAÇÃO
+  // ─────────────────────────────────────────────
+  criarEstrelas();
+  controle();
+  atualizarFundo();
+
+  // Fala de boas-vindas com delay
+  setTimeout(() => falar('🐾 Oi! Cuida bem de mim!'), 500);
+
+</script>
+</body>
+</html>
