@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Introdução ao JavaScript</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-base-200 min-h-screen p-6">
+
+  <div class="max-w-3xl mx-auto space-y-8">
+
+    <header class="text-center py-8">
+      <h1 class="text-4xl font-black text-primary">Introdução ao JavaScript</h1>
+      <p class="text-base-content/60 mt-2">Semana 6 — Variáveis, Funções, Classes e DOM</p>
+    </header>
+
+    <!-- PARTE 1: Hello World -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title text-2xl">1. Hello World</h2>
+        <p class="text-sm text-base-content/70">A função <code>hello()</code> é chamada ao clicar no botão e injeta texto no DOM usando <code>getElementById</code>.</p>
+        <button class="btn btn-primary mt-2" onclick="hello()">Dizer Hello World</button>
+        <h3 id="hello" class="text-xl font-bold text-success mt-2"></h3>
+      </div>
+    </div>
+
+    <!-- PARTE 2: Variáveis -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title text-2xl">2. Variáveis em JavaScript</h2>
+        <p class="text-sm text-base-content/70 mb-3">Demonstração das três formas de declarar variáveis: <code>const</code>, <code>let</code> e <code>var</code>.</p>
+        <button class="btn btn-secondary" onclick="demonstrarVariaveis()">Executar Demonstração</button>
+        <div id="resultadoVariaveis" class="mockup-code mt-4 hidden">
+          <pre id="outputVariaveis"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTE 3: Classe Carro -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title text-2xl">3. Objetos e Classes — Meu Carro</h2>
+        <p class="text-sm text-base-content/70 mb-3">Crie um objeto <code>Carro</code> preenchendo os campos abaixo.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="label"><span class="label-text">Marca</span></label>
+            <input type="text" id="marca" class="input input-bordered w-full" placeholder="Ex: Ford">
+          </div>
+          <div>
+            <label class="label"><span class="label-text">Modelo</span></label>
+            <input type="text" id="modelo" class="input input-bordered w-full" placeholder="Ex: Ka">
+          </div>
+          <div>
+            <label class="label"><span class="label-text">Ano</span></label>
+            <input type="number" id="ano" class="input input-bordered w-full" placeholder="Ex: 2022">
+          </div>
+        </div>
+        <button class="btn btn-accent mt-4" onclick="criarCarro()">Criar Carro</button>
+        <div id="resultadoCarro" class="alert alert-success mt-4 hidden">
+          <span id="textoCarro"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTE 4: Lâmpada -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body items-center text-center">
+        <h2 class="card-title text-2xl">4. Lâmpada Interativa</h2>
+        <p class="text-sm text-base-content/70 mb-4">Manipulação de atributos HTML via JavaScript — <code>onclick</code> alternando o estado visual.</p>
+        <div id="lampada" class="text-9xl transition-all duration-300 cursor-pointer select-none" onclick="toggleLampada()" title="Clique na lâmpada!">💡</div>
+        <p id="statusLampada" class="text-lg font-bold mt-2 text-warning">Acesa ✨</p>
+        <div class="flex gap-4 mt-4">
+          <button class="btn btn-warning" onclick="acenderLampada()">Acender</button>
+          <button class="btn btn-neutral" onclick="apagarLampada()">Apagar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── 1. Hello World ──────────────────────────────
+    function hello() {
+      document.getElementById('hello').innerHTML = 'Hello World! 🎉';
+    }
+
+    // ── 2. Demonstração de Variáveis ─────────────────
+    function demonstrarVariaveis() {
+      const linhas = [];
+
+      const valor = 1;
+      linhas.push(`const valor = ${valor}`);
+
+      let adcione = 1;
+      linhas.push(`let adcione = ${adcione}`);
+      linhas.push(`valor + adcione = ${valor + adcione}`);
+
+      var outra = 'banana';
+      linhas.push(`var outra = "${outra}"`);
+
+      outra = true;
+      linhas.push(`outra (booleano) = ${outra}`);
+      linhas.push(`!outra = ${!outra}`);
+
+      const output = document.getElementById('outputVariaveis');
+      output.textContent = linhas.map(l => '> ' + l).join('\n');
+      document.getElementById('resultadoVariaveis').classList.remove('hidden');
+    }
+
+    // ── 3. Classe Carro ───────────────────────────────
+    class Carro {
+      constructor(marca, modelo, ano) {
+        this.Marca  = marca;
+        this.Modelo = modelo;
+        this.Ano    = ano;
+      }
+      exibirDetalhes() {
+        return `Marca: ${this.Marca} | Modelo: ${this.Modelo} | Ano: ${this.Ano}`;
+      }
+    }
+
+    function criarCarro() {
+      const marca  = document.getElementById('marca').value.trim();
+      const modelo = document.getElementById('modelo').value.trim();
+      const ano    = document.getElementById('ano').value.trim();
+
+      if (!marca || !modelo || !ano) {
+        alert('Preencha todos os campos!');
+        return;
+      }
+
+      const meuCarro = new Carro(marca, modelo, ano);
+      const resultado = document.getElementById('resultadoCarro');
+      document.getElementById('textoCarro').textContent = '🚗 ' + meuCarro.exibirDetalhes();
+      resultado.classList.remove('hidden');
+    }
+
+    // ── 4. Lâmpada ────────────────────────────────────
+    let lampacaAcesa = true;
+
+    function acenderLampada() {
+      lampacaAcesa = true;
+      document.getElementById('lampada').textContent = '💡';
+      document.getElementById('statusLampada').textContent = 'Acesa ✨';
+      document.getElementById('statusLampada').className = 'text-lg font-bold mt-2 text-warning';
+    }
+
+    function apagarLampada() {
+      lampacaAcesa = false;
+      document.getElementById('lampada').textContent = '🔦';
+      document.getElementById('statusLampada').textContent = 'Apagada 🌑';
+      document.getElementById('statusLampada').className = 'text-lg font-bold mt-2 text-base-content/40';
+    }
+
+    function toggleLampada() {
+      lampacaAcesa ? apagarLampada() : acenderLampada();
+    }
+  </script>
+
+</body>
+</html>
