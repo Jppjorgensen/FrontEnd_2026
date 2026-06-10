@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Tarefas</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-base-200 min-h-screen flex items-center justify-center p-4">
+
+  <div class="card bg-base-100 shadow-2xl w-full max-w-md">
+    <div class="card-body">
+
+      <h2 class="card-title text-2xl font-black justify-center mb-2">
+        📝 Lista de Tarefas
+      </h2>
+
+      <!-- Input de nova tarefa -->
+      <div class="flex gap-2">
+        <input
+          type="text"
+          id="taskInput"
+          class="input input-bordered flex-1"
+          placeholder="Digite uma nova tarefa..."
+          onkeydown="if(event.key==='Enter') addTask()"
+        >
+        <button class="btn btn-primary" onclick="addTask()">Adicionar</button>
+      </div>
+
+      <!-- Contador -->
+      <div class="flex justify-between text-sm text-base-content/50 mt-1 px-1">
+        <span id="totalLabel">0 tarefas</span>
+        <span id="concluidasLabel">0 concluídas</span>
+      </div>
+
+      <!-- Lista -->
+      <ul id="taskList" class="space-y-2 mt-2 min-h-[60px]">
+        <li id="emptyMsg" class="text-center text-base-content/40 py-6 text-sm">
+          Nenhuma tarefa ainda. Adicione uma acima! ☝️
+        </li>
+      </ul>
+
+      <!-- Botão limpar concluídas -->
+      <button class="btn btn-outline btn-error btn-sm mt-2" onclick="limparConcluidas()">
+        🗑️ Limpar concluídas
+      </button>
+
+    </div>
+  </div>
+
+  <script>
+    let tarefas = [];
+
+    function addTask() {
+      const input = document.getElementById('taskInput');
+      const texto = input.value.trim();
+      if (!texto) return;
+
+      const tarefa = { id: Date.now(), texto, concluida: false };
+      tarefas.push(tarefa);
+      input.value = '';
+      renderizar();
+    }
+
+    function concluirTarefa(id) {
+      const t = tarefas.find(t => t.id === id);
+      if (t) t.concluida = !t.concluida;
+      renderizar();
+    }
+
+    function excluirTarefa(id) {
+      tarefas = tarefas.filter(t => t.id !== id);
+      renderizar();
+    }
+
+    function limparConcluidas() {
+      tarefas = tarefas.filter(t => !t.concluida);
+      renderizar();
+    }
+
+    function renderizar() {
+      const lista = document.getElementById('taskList');
+      const emptyMsg = document.getElementById('emptyMsg');
+
+      lista.innerHTML = '';
+
+      if (tarefas.length === 0) {
+        lista.appendChild(criarElemento('li', 'text-center text-base-content/40 py-6 text-sm',
+          'Nenhuma tarefa ainda. Adicione uma acima! ☝️'));
+        atualizarContadores();
+        return;
+      }
+
+      tarefas.forEach(t => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center gap-3 bg-base-200 rounded-xl px-4 py-3';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = t.concluida;
+        checkbox.className = 'checkbox checkbox-primary';
+        checkbox.onchange = () => concluirTarefa(t.id);
+
+        const span = document.createElement('span');
+        span.className = 'flex-1 text-sm ' + (t.concluida ? 'line-through text-base-content/40' : '');
+        span.textContent = t.texto;
+
+        const btnExcluir = document.createElement('button');
+        btnExcluir.className = 'btn btn-ghost btn-xs text-error';
+        btnExcluir.textContent = '✕';
+        btnExcluir.onclick = () => excluirTarefa(t.id);
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(btnExcluir);
+        lista.appendChild(li);
+      });
+
+      atualizarContadores();
+    }
+
+    function atualizarContadores() {
+      const total = tarefas.length;
+      const concluidas = tarefas.filter(t => t.concluida).length;
+      document.getElementById('totalLabel').textContent = `${total} tarefa${total !== 1 ? 's' : ''}`;
+      document.getElementById('concluidasLabel').textContent = `${concluidas} concluída${concluidas !== 1 ? 's' : ''}`;
+    }
+
+    function criarElemento(tag, classe, texto) {
+      const el = document.createElement(tag);
+      el.className = classe;
+      el.textContent = texto;
+      return el;
+    }
+  </script>
+
+</body>
+</html>
